@@ -16,6 +16,32 @@ def add_synonyms_to_commands():
         command_copy += list_syn
     return set(command_copy)
 
+def transform_to_number(value):
+    if value.isdigit():
+        return int(value)
+    else:
+        match value.lower():
+            case 'un':
+                return 1
+            case 'deux':
+                return 2
+            case 'trois':
+                return 3
+            case 'quatre':
+                return 4
+            case 'cinq':
+                return 5
+            case 'six':
+                return 6
+                
+
+def handle_object_number():
+    pos_words = [token.pos_ for token in tokens]
+    if ('NUM' in pos_words) and (pos_words.index('NUM')>[token.text for token in tokens].index('objet')):
+        number = tokens[pos_words.index('NUM')]
+        print(f'The number of the object is: {transform_to_number(number.text)}')
+
+
 def get_audio(trigger = False):
     with sr.Microphone() as source:
         print(f'Listening {"for trigger word" if trigger  else ""}')
@@ -34,14 +60,14 @@ def get_audio(trigger = False):
 
 # elements to detect
 list_commands = ["avancer","stopper","gauche","droite","faire","transporter"]
-list_actions = ['prendre','déposer']
+list_actions = ['prendre','déposer','objet']
 list_products = ['bâton','planche']
 trigger_words = "ok google"
 
 synonyms_dict = {
     "avancer":['devant'],
     'stopper': ["arrêter","arrêt"],
-    'faire': ['effectuer'],
+    'faire': ['effectuer','fabriquer'],
     'transporter': ['déplacer'],
     'gauche': ['bâbord'],
     'droite': ['tribord']
@@ -56,9 +82,12 @@ list_all_commands = add_synonyms_to_commands()
 nlp = spacy.load('fr_core_news_md')
 recognizer = sr.Recognizer()
 
-while True:
+i=0
+while i==0:
+    i+=1
     time.sleep(1)
-    recognized_text = get_audio(trigger=True)
+    # recognized_text = get_audio(trigger=True)
+    recognized_text = "ok google fait l'objet 3"
     print(recognized_text)
     if(trigger_words in recognized_text.lower()):
 
@@ -70,9 +99,9 @@ while True:
         print(tokens)
 
         # transform to radicals
-        radical = [token.lemma_ for token in tokens] 
+        radical = set([token.lemma_ for token in tokens]) 
 
-        radical = set(radical)
+        print(radical)
 
         detected_commands = radical.intersection(list_all_commands) #get intersection 
 
@@ -88,3 +117,5 @@ while True:
                 if len(detected_follow_ups)>0:
                     detected_follow_up = detected_follow_ups.pop()
                     print(f'Follow up command is: {detected_follow_up}')
+                    if detected_follow_up=='objet':
+                        handle_object_number()
