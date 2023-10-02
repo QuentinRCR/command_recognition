@@ -36,10 +36,27 @@ def transform_to_number(value):
                 
 
 def handle_object_number():
+    default_object_id = 0
+    default_object_number = 1
+
     pos_words = [token.pos_ for token in tokens]
-    if ('NUM' in pos_words) and (pos_words.index('NUM')>[token.text for token in tokens].index('objet')):
-        number = tokens[pos_words.index('NUM')]
-        print(f'The number of the object is: {transform_to_number(number.text)}')
+    number_numbers = pos_words.count('NUM')
+    object_index = radical.index('objet')
+    if number_numbers >0:
+        num1_index = pos_words.index('NUM')
+        if number_numbers == 1: #if one of the 2 value is defined
+            number = tokens[num1_index]
+            if object_index<num1_index:
+                default_object_id = transform_to_number(number.text)
+            else:
+                default_object_number = transform_to_number(number.text)
+        elif (number_numbers == 2):
+            num2_index = pos_words[num1_index+1:].index('NUM')+ num1_index + 1
+
+            if (num1_index < object_index < num2_index):
+                default_object_id = transform_to_number(tokens[num2_index].text)
+                default_object_number = transform_to_number(tokens[num1_index].text)
+        print(f'Creating {default_object_number} objet{"s" if default_object_number>1 else ""} with id {default_object_id}')
 
 
 def get_audio(trigger = False):
@@ -86,8 +103,8 @@ i=0
 while i==0:
     i+=1
     time.sleep(1)
-    # recognized_text = get_audio(trigger=True)
-    recognized_text = "ok google fait l'objet 3"
+    recognized_text = get_audio(trigger=True)
+    # recognized_text = "ok google fait quatre objets numéro cinq"
     print(recognized_text)
     if(trigger_words in recognized_text.lower()):
 
@@ -99,11 +116,11 @@ while i==0:
         print(tokens)
 
         # transform to radicals
-        radical = set([token.lemma_ for token in tokens]) 
+        radical = [token.lemma_ for token in tokens]
 
         print(radical)
 
-        detected_commands = radical.intersection(list_all_commands) #get intersection 
+        detected_commands = set(radical).intersection(list_all_commands) #get intersection 
 
         if len(detected_commands)>0: # if there is a matching command
             detected_command = detected_commands.pop()
@@ -113,7 +130,7 @@ while i==0:
 
 
             if detected_command in follow_up_command: # check if this command have a follow up command
-                detected_follow_ups = radical.intersection(follow_up_command[detected_command])
+                detected_follow_ups = set(radical).intersection(follow_up_command[detected_command])
                 if len(detected_follow_ups)>0:
                     detected_follow_up = detected_follow_ups.pop()
                     print(f'Follow up command is: {detected_follow_up}')
