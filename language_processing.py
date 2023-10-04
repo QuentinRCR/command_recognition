@@ -72,6 +72,10 @@ def get_audio(trigger = False):
 
     return recognized_text
 
+def calibrate_noise():
+    print("Calibrating, don't make any noise")
+    with sr.Microphone() as source:
+        recognizer.adjust_for_ambient_noise(source)  # listen for 1 second to calibrate the energy threshold for ambient noise levels
 
 ##==========================PARAMETERS=====================================
 
@@ -82,7 +86,7 @@ list_products = ['bâton','planche']
 trigger_words = "ok google"
 
 synonyms_dict = {
-    "avancer":['devant'],
+    "avancer":['devant','avant'],
     'stopper': ["arrêter","arrêt"],
     'faire': ['effectuer','fabriquer'],
     'transporter': ['déplacer'],
@@ -98,20 +102,16 @@ follow_up_command = {'faire': list_actions, 'transporter':list_products}
 list_all_commands = add_synonyms_to_commands()
 nlp = spacy.load('fr_core_news_md')
 recognizer = sr.Recognizer()
+calibrate_noise()
 
-i=0
-while i==0:
-    i+=1
-    time.sleep(1)
+while True:
     recognized_text = get_audio(trigger=True)
-    # recognized_text = "ok google fait quatre objets numéro cinq"
-    print(recognized_text)
     if(trigger_words in recognized_text.lower()):
 
         # Speech to text
-        # recognized_text = get_audio()
+        recognized_text = get_audio()
 
-        #tokenise
+        # tokenise
         tokens = nlp(recognized_text) 
         print(tokens)
 
