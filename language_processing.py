@@ -67,6 +67,21 @@ def handle_object_number():
                 default_object_number = transform_to_number(tokens[num1_index].text)
         print(f'Creating {default_object_number} objet{"s" if default_object_number>1 else ""} with id {default_object_id}')
 
+def get_distance(detected_command):
+    if detected_command in ["avancer","reculer"]:
+        distance = 0.1 # go forward by 10 centimeters by default
+    else:
+        distance = 90 # turn 90° by default
+
+    # if there is a number in the sentence, extract it
+    pos_words = [token.pos_ for token in tokens]
+    number_numbers = pos_words.count('NUM')
+    if(number_numbers == 1):
+        number = str(tokens[pos_words.index('NUM')]).replace(",",".")
+        distance = float(number)
+
+    return distance
+
 # listen to the mic and transform any loud sound it to a text
 def get_input_text(trigger = False):
     with sr.Microphone() as source:
@@ -124,15 +139,13 @@ while True:
 
         # Get actual command
         recognized_text = get_input_text()
+        print(f'Google understood: {recognized_text}')
 
         # tokenise it
         tokens = nlp(recognized_text) 
-        print(tokens)
 
         # transform to radicals
         radical = [token.lemma_ for token in tokens]
-
-        print(radical)
 
         #get intersection of the list of commands and the radicals
         detected_commands = set(radical).intersection(list_all_commands) 
@@ -155,3 +168,6 @@ while True:
                     print(f'Follow up command is: {detected_follow_up}')
                     if detected_follow_up=='objet':
                         handle_object_number()
+
+            if detected_command in ["droite","gauche","avancer","reculer"]:
+                distance = get_distance(detected_command)
