@@ -1,6 +1,5 @@
 import speech_recognition as sr
 import spacy
-import time
 
 def get_original_word(synonym):
     if synonym in synonyms_dict.keys():
@@ -35,31 +34,41 @@ def transform_to_number(value):
                 return 6
                 
 
+# handle sentences such as "Fait trois objets de type 2"
 def handle_object_number():
+    # if no number and no object are specified, create the object 0 once
     default_object_id = 0
     default_object_number = 1
 
+    # get the type of each word
     pos_words = [token.pos_ for token in tokens]
     number_numbers = pos_words.count('NUM')
     object_index = radical.index('objet')
+
     if number_numbers >0:
         num1_index = pos_words.index('NUM')
-        if number_numbers == 1: #if one of the 2 value is defined
+        # if there only is one number in the sentence
+        if number_numbers == 1:
             number = tokens[num1_index]
+
+            # if the number is after the object, its the id, otherwise it is the number
             if object_index<num1_index:
                 default_object_id = transform_to_number(number.text)
             else:
                 default_object_number = transform_to_number(number.text)
+
+        # if there is 2 numbers in the sentence
         elif (number_numbers == 2):
             num2_index = pos_words[num1_index+1:].index('NUM')+ num1_index + 1
 
+            # if one number is before and the other is after, set the corresponding values
             if (num1_index < object_index < num2_index):
                 default_object_id = transform_to_number(tokens[num2_index].text)
                 default_object_number = transform_to_number(tokens[num1_index].text)
         print(f'Creating {default_object_number} objet{"s" if default_object_number>1 else ""} with id {default_object_id}')
 
-
-def get_audio(trigger = False):
+# listen to the mic and transform any loud sound it to a text
+def get_input_text(trigger = False):
     with sr.Microphone() as source:
         print(f'Listening {"for trigger word" if trigger  else ""}')
         audio = recognizer.listen(source)
@@ -77,21 +86,24 @@ def calibrate_noise():
     with sr.Microphone() as source:
         recognizer.adjust_for_ambient_noise(source)  # listen for 1 second to calibrate the energy threshold for ambient noise levels
 
+
 ##==========================PARAMETERS=====================================
 
 # elements to detect
-list_commands = ["avancer","stopper","gauche","droite","faire","transporter"]
+list_commands = ["reculer","avancer","stopper","gauche","droite","faire","transporter"]
 list_actions = ['prendre','déposer','objet']
 list_products = ['bâton','planche']
 trigger_words = "ok google"
 
+# synonym dictionary
 synonyms_dict = {
     "avancer":['devant','avant'],
     'stopper': ["arrêter","arrêt"],
     'faire': ['effectuer','fabriquer'],
     'transporter': ['déplacer'],
     'gauche': ['bâbord'],
-    'droite': ['tribord']
+    'droite': ['tribord'],
+    "reculer": ["arrière"]
 }
 
 follow_up_command = {'faire': list_actions, 'transporter':list_products}
@@ -100,18 +112,20 @@ follow_up_command = {'faire': list_actions, 'transporter':list_products}
 
 # Initial loading
 list_all_commands = add_synonyms_to_commands()
-nlp = spacy.load('fr_core_news_md')
+nlp = spacy.load('fr_core_news_md') # load french library
 recognizer = sr.Recognizer()
-calibrate_noise()
+calibrate_noise() # adapt the sound threshold to the ambient noise
 
 while True:
-    recognized_text = get_audio(trigger=True)
+    recognized_text = get_input_text(trigger=True)
+
+    # if the tiger world is in the list of words
     if(trigger_words in recognized_text.lower()):
 
-        # Speech to text
-        recognized_text = get_audio()
+        # Get actual command
+        recognized_text = get_input_text()
 
-        # tokenise
+        # tokenise it
         tokens = nlp(recognized_text) 
         print(tokens)
 
@@ -120,17 +134,22 @@ while True:
 
         print(radical)
 
-        detected_commands = set(radical).intersection(list_all_commands) #get intersection 
-
-        if len(detected_commands)>0: # if there is a matching command
+        #get intersection of the list of commands and the radicals
+        detected_commands = set(radical).intersection(list_all_commands) 
+        
+        # if there is a matching command
+        if len(detected_commands)>0: 
             detected_command = detected_commands.pop()
 
+            # get the original word if it was one of the synonyms
             detected_command = get_original_word(detected_command)
             print(f'Command detected: {detected_command}')
 
-
-            if detected_command in follow_up_command: # check if this command have a follow up command
+            # check if this command have a follow up command
+            if detected_command in follow_up_command:
                 detected_follow_ups = set(radical).intersection(follow_up_command[detected_command])
+
+                # if there is a follow up command, extract it
                 if len(detected_follow_ups)>0:
                     detected_follow_up = detected_follow_ups.pop()
                     print(f'Follow up command is: {detected_follow_up}')
