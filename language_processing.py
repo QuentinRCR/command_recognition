@@ -1,6 +1,35 @@
 import speech_recognition as sr
 import spacy
 
+def send_action(direction, distance):
+    translation = {"droite":'right',"gauche":'left',"avancer":'forward',"reculer":'backward'}
+    direction = translation[direction]
+
+    printed_message = f'Moving {direction} from a distance of {distance} meters' if direction in ["forward","backward"] else f'Turning {distance} degrees toward the {direction}'
+    print(printed_message)
+
+    if onRobot:
+        # Create a goal for the action
+        goal = Turtlebot_moveGoal()
+        goal.direction = direction  # Specify the desired direction ('forward', 'backward', 'left', or 'right')
+        goal.distance = distance  # Specify the desired distance (centimeters or degrees)
+
+        # Send the goal to the action server
+        client.send_goal(goal)
+
+        # Wait for the action to complete
+        client.wait_for_result()
+
+        # Get the result of the action
+        result = client.get_result()
+
+        # Print the action result
+        if result.status == "success":
+            rospy.loginfo(f'Action succeeded. Final {"distance" if direction in ["forward","backward"] else "angle"}: {result.final_distance}')
+        else:
+            rospy.loginfo("Action failed")
+
+
 def get_original_word(synonym):
     if synonym in synonyms_dict.keys():
         return synonym
@@ -82,6 +111,7 @@ def get_distance(detected_command):
 
     return distance
 
+
 # listen to the mic and transform any loud sound it to a text
 def get_input_text(trigger = False):
     with sr.Microphone() as source:
@@ -125,7 +155,15 @@ follow_up_command = {'faire': list_actions, 'transporter':list_products}
 
 ##==========================================================================
 
-# Initial loading
+onRobot = False # set to True if the program is really running on the robot
+
+# initialise action server
+if onRobot:
+    rospy.init_node('turtlebot_mymove_client', anonymous=True)
+    client = actionlib.SimpleActionClient('turtlebot_mymove', Turtlebot_moveAction)
+    client.wait_for_server() 
+
+# Initialise command recognition
 list_all_commands = add_synonyms_to_commands()
 nlp = spacy.load('fr_core_news_md') # load french library
 recognizer = sr.Recognizer()
@@ -156,7 +194,6 @@ while True:
 
             # get the original word if it was one of the synonyms
             detected_command = get_original_word(detected_command)
-            print(f'Command detected: {detected_command}')
 
             # check if this command have a follow up command
             if detected_command in follow_up_command:
@@ -169,5 +206,8 @@ while True:
                     if detected_follow_up=='objet':
                         handle_object_number()
 
-            if detected_command in ["droite","gauche","avancer","reculer"]:
+            if detected_command in ["droite","gauche","avancer","reculer"]: #handled commands
                 distance = get_distance(detected_command)
+                send_action(detected_command,distance)
+            else:
+                print(f'Command detected: {detected_command}') #not yet handled commands
