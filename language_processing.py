@@ -1,5 +1,6 @@
 import speech_recognition as sr
 import spacy
+import numpy as np
 
 def send_action(direction, distance):
     translation = {"droite":'right',"gauche":'left',"avancer":'forward',"reculer":'backward'}
@@ -108,6 +109,12 @@ def get_distance(detected_command):
     if(number_numbers == 1):
         number = str(tokens[pos_words.index('NUM')]).replace(",",".")
         distance = float(number)
+
+        # convert usual units
+        if len(set(["centimètres","cm","centimètre"]).intersection(radical))>0 :
+            distance/=100
+        if len(set(["radians","rd","radian"]).intersection(radical)) :
+            distance*=180/np.pi
 
     return distance
 
